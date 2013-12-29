@@ -4,14 +4,15 @@ Author: Luke Williams <shmookey@shmookey.net>
 Distributed under the MIT license, see LICENSE file for details.
 '''
 
-from coconut.error import *
 from coconut.primitive import Element
 from coconut.db import get_db, SerialisableDBRef, SerialisableObjectId
 import coconut.schema
 import coconut.element
+import coconut.error
 
 from bson.objectid import ObjectId
 from bson.dbref import DBRef
+import pymongo.errors
 
 import copy, time
 
@@ -44,6 +45,11 @@ class MutableElement (Element):
 
         raise NotImplementedError()
 
+    def export (self):
+        '''Return a deep copy of the element suitable for serialisation.'''
+        
+        return coconut.schema.Schema.export_element(self)
+
 class Dict (MutableElement, dict):
     '''Database-aware dict type.'''
 
@@ -64,7 +70,7 @@ class Dict (MutableElement, dict):
 
     def __str__ (self):
         current = self.__unsaved__ if self.__unsaved__ != None else self
-        return dict.__str__(current,key)
+        return dict.__str__(current)
 
     # Accessors
 
@@ -106,7 +112,7 @@ class Dict (MutableElement, dict):
                 element = value
         else:
             if not key in schema[dict]:
-                raise ValidationKeyError (key)
+                raise coconut.error.ValidationKeyError (key)
             item_schema = schema[dict][key]
             if traverse:
                 element = coconut.schema.Schema.import_element(value, item_schema, self)
@@ -297,25 +303,25 @@ class List (MutableElement, list):
 
             # Is the value a primitive type?
             if not isinstance(current_value,MutableElement):
-                if key not in old or not old[key] == current_value:
-                    sets[key] = coconut.schema.Schema.export_element(current_value,key_schema)
+                if i >= len(old) or not old[i] == current_value:
+                    sets[i] = coconut.schema.Schema.export_element(current_value,key_schema)
                 continue
             
             traverse = key_schema.get('traverse',True)
             if not traverse:
                 # TODO: Check if there are actually any changes
-                sets[key] = current_value
+                sets[i] = current_value
                 continue
-            if key not in old:
+            if i >= len(old):
                 child_item = coconut.schema.Schema.export_element(current_value)
-                sets[key] = child_item
+                sets[i] = child_item
                 continue
             
             child_sets, child_unsets = current_value.get_changes()
 
             # An empty string key indicates the child wants to be rebuilt
             if len(child_sets) == 1 and '' in child_sets:
-                sets[key] = child_sets['']
+                sets[i] = child_sets['']
                 continue
             
             # Are there any changes in the child container?
@@ -362,6 +368,8 @@ class DocumentClass (type):
         return cls(doc)
 
     def find_first (cls, criteria):
+        '''Return the first element matching the provided criteria.'''
+
         criteria['__active__'] = True
         doc = cls.__db__.find_one(criteria)
         if not doc: raise DocumentNotFound (criteria)
@@ -369,12 +377,27 @@ class DocumentClass (type):
 
     def find (cls, criteria={}, limit=0):
         '''Get all matching documents.'''
+
         #TODO: Implement limits higher than 1
         criteria['__active__'] = True
         if limit == 1: return cls.find_first(criteria)
         doclist = cls.__db__.find(criteria)
         objlist = [cls(doc) for doc in doclist]
         return objlist
+
+    def ensure_indexes (cls):
+        '''Ensure indexes defined on the Document schema exist in the database.
+
+        Currently only indexes on top-level keys are supported.
+        '''
+
+        for (key,val) in cls.__schema__[dict].items():
+            if isinstance(val,dict):
+                index = val.get('index',None)
+                if not index: continue
+                opts = {}
+                if index == 'unique': opts['unique'] = True
+                cls.__db__.ensure_index(key, **opts)
 
 class Document (Dict):
     __metaclass__ = DocumentClass
@@ -429,12 +452,17 @@ class Document (Dict):
     def save (self):
         sets, unsets = self.get_changes()
         query = {'$set': sets.copy(), '$unset': unsets.copy()}
-        if self.id:
-            self.__db__.update({'_id':ObjectId(self.id)}, query)
-        else:
-            query['$set']['__active__'] = True
-            docid = self.__db__.insert(query['$set'])
-            self.id = str(docid)
+
+        try:
+            if self.id:
+                self.__db__.update({'_id':ObjectId(self.id)}, query)
+            else:
+                query['$set']['__active__'] = True
+                docid = self.__db__.insert(query['$set'])
+                self.id = str(docid)
+        except pymongo.errors.DuplicateKeyError as e:
+            raise coconut.error.UniqueIndexViolation(str(e))
+
         self.flush()
         event_query = {'set': sets.copy(), 'unset': unsets.copy()}
         # Write change event

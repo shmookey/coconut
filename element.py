@@ -20,9 +20,12 @@ def to_json (obj):
 
 class JSONElementEncoder (json.JSONEncoder):
     def default (self, o):
-        if isinstance(o,MutableElement):
-            print 'encoding %s element %s' % (type(o),o)
-            o = Schema.export_element(o)
+        if isinstance(o,coconut.container.MutableElement):
+            return Schema.export_element(o)
+        try:
+            return o.__json__()
+        except:
+            pass
         return json.JSONEncoder.default(self, o)
 
 #
@@ -94,7 +97,7 @@ class Link (Element):
             elif inspect.isclass(value_schema) and isinstance(value_schema,coconut.container.Document):
                 self.type = value_schema
             else:
-                raise SchemaTypeError (schema, 'Link schema id must map to Document, string or any.')
+                raise SchemaTypeError (schema, 'Link schema id must map to Document, string or any, not %s' % value_schema)
         else:
             raise SchemaTypeError(schema,'Link schema must include "id" or "any" key.')
 

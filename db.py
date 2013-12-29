@@ -24,5 +24,5 @@ class SerialisableDBRef (DBRef):
 
 class SerialisableObjectId (ObjectId):
     def __json__ (self):
-        return str(self.id)
+        return str(self)
 

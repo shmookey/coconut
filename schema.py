@@ -12,7 +12,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from bson.dbref import DBRef
 
-import copy, inspect, json, time
+import copy, inspect, time
 
 class Schema (object):
     '''Base class for field types representing containers.
@@ -62,7 +62,7 @@ class Schema (object):
     @classmethod
     def get_type (cls, schema):
         if schema == any: return any
-        for t in [list,dict,id,str,int,float,any]:
+        for t in [list,dict,id,str,int,bool,float,any]:
             if t in schema: return t
         raise SchemaUnknownType (schema)
 
@@ -75,6 +75,7 @@ class Schema (object):
     def import_element (cls, source, schema, parent):
         '''Generate an Element from source data according to a schema.'''
         # TODO: Non-nullable fields
+        Schema.validate_schema(schema)
         if source == None: return source
 
         element = None
@@ -101,9 +102,10 @@ class Schema (object):
             raise ValidationTypeError (expected,element_type)
 
         # TODO: Validate primitives
-        if element_type == str: element = Str(source)
-        elif element_type == int: element = Int(source)
-        elif element_type == float: element = Float(source)
+        if issubclass(element_type,str): element = Str(source)
+        elif issubclass(element_type,int): element = Int(source)
+        elif issubclass(element_type,float): element = Float(source)
+        elif issubclass(element_type,bool): element = source
 
         elif element_type == list:
             # TODO: Implement 'any'
@@ -124,7 +126,7 @@ class Schema (object):
                         else:
                             element[key] = None
         else:
-            raise ValidationTypeError ([id,str,int,float,list,dict,any,unicode], element_type)
+            raise ValidationTypeError ('primitive or container type, Coconut wrapper or "any"', element_type)
 
         return element
 
@@ -142,6 +144,7 @@ class Schema (object):
             if not isinstance(source,coconut.container.MutableElement):
                 raise ValueError ('Source must be of MutableElement type if no schema specified.')
             schema = source.__schema__
+        Schema.validate_schema(schema)
         element = None
         expected = Schema.get_type(schema)
         element_type = type(source)
@@ -163,12 +166,12 @@ class Schema (object):
         if not issubclass(element_type, expected):
             raise ValidationTypeError(expected,element_type)
 
-        # TODO: Validate output against schema
-        if filter(lambda t: isinstance(source,t),[str,int,float]): element = source
+        if filter(lambda t: isinstance(source,t),[str,int,float,bool]):
+            # Don't do anything for primitives
+            element = source
         elif isinstance(source, coconut.element.Link):
             element = source.format_db()
         elif isinstance(source, list):
-            # TODO: Implement 'any'
             element = []
             for i, item in enumerate(source):
                 item_schema = Schema.get_list_index_schema(i,schema)
@@ -181,7 +184,6 @@ class Schema (object):
                 if value_schema == any:
                     new_item = Schema.export_element(item,value_schema)
                 elif not key in value_schema:
-                    # TODO: Non-strict mode
                     raise ValidationKeyError (key)
                 else:
                     item_schema = value_schema[key]
@@ -189,7 +191,7 @@ class Schema (object):
                 element[key] = new_item
         
         else:
-            raise ValidationTypeError ([id,str,int,float,list,dict,any], element_type)
+            raise ValidationTypeError ([id,str,int,float,bool,list,dict,any], element_type)
 
         return element
 
@@ -211,3 +213,16 @@ class Schema (object):
             return item_schemas[0]
         raise ValidationListError()
 
+    @classmethod
+    def validate_schema (cls, schema):
+        '''Raise an exception if a schema has missing or unsupported keys.'''
+
+        if schema == any: return
+        t = cls.get_type (schema) # Checks for data type
+        for (key,val) in schema.items():
+            if key == t: continue
+            if key in ['default','index']: continue
+            if t == list and key in [range]: continue
+            if t in [list,dict] and key in ['traverse']: continue
+            raise SchemaUnknownKey(key,schema)
+        
