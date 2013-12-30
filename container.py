@@ -364,7 +364,7 @@ class DocumentClass (type):
         else:
             raise TypeError ('ID must be of type str, ObjectId or Link, not %s' % type(id).__name__)
         if not doc:
-            raise DocumentNotFound ('Could not find document ID: %s' % str(id))
+            raise coconut.error.DocumentNotFound ('Could not find document ID: %s' % str(id))
         return cls(doc)
 
     def find_first (cls, criteria):
@@ -372,7 +372,7 @@ class DocumentClass (type):
 
         criteria['__active__'] = True
         doc = cls.__db__.find_one(criteria)
-        if not doc: raise DocumentNotFound (criteria)
+        if not doc: raise coconut.error.DocumentNotFound (criteria)
         return cls(doc)
 
     def find (cls, criteria={}, limit=0):
@@ -473,6 +473,13 @@ class Document (Dict):
     def remove (self):
         self.__collection__.update ({'_id':self.id},{'$set':{'__active__':False}})
         self.id = None
+
+    def export (self):
+        '''Return a deep copy of the Document suitable for serialisation.'''
+        
+        doc = coconut.schema.Schema.export_element(self)
+        doc['id'] = self.id
+        return doc
 
 class Revision (Document):
     '''A change event to a document.'''
