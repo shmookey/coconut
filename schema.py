@@ -89,8 +89,11 @@ class Schema (object):
  
         if expected == any:
             # If we're expecting anything, we're expecting what we get
-            expected = element_type
             value_schema = any
+            if issubclass(element_type, DBRef) or issubclass(element_type, ObjectId):
+                expected = id
+            else:
+                expected = element_type 
         else:
             value_schema = schema[expected]
 
@@ -126,7 +129,7 @@ class Schema (object):
                         else:
                             element[key] = None
         else:
-            raise ValidationTypeError ('primitive or container type, Coconut wrapper or "any"', element_type)
+            raise ValidationTypeError ('type compatible with schema %s' % schema, element_type)
 
         return element
 

@@ -1,10 +1,11 @@
 #!/usr/bin/python2.7
 
-import coconut.container
-from coconut.db import get_db
-from coconut.error import ValidationTypeError, ValidationKeyError
-
 import unittest
+
+from pymongo import MongoClient
+
+import coconut.container
+from coconut.error import ValidationTypeError, ValidationKeyError
 
 class AnotherTestDocument (coconut.container.Document):
     __schema__ = {
@@ -15,7 +16,7 @@ class AnotherTestDocument (coconut.container.Document):
 class TestDBLists (unittest.TestCase):
     '''Test DB List types.'''
     def tearDown(self):
-        db = get_db()
+        db = self.db = coconut.container.Document.__db__ = MongoClient().coconut_test
         db.TestDocument_List.remove()
         db.AnotherTestDocument.remove()
 

@@ -1,16 +1,17 @@
 #!/usr/bin/python2.7
 
-import coconut.container
-from coconut.db import get_db
-from coconut.error import UniqueIndexViolation
-
 import unittest
+
+from pymongo import MongoClient
+
+import coconut.container
+from coconut.error import UniqueIndexViolation
 
 class TestDBLinks (unittest.TestCase):
     '''Test the Link type.'''
 
     def setUp (self):
-        self.db = get_db()
+        self.db = coconut.container.Document.__db__ = MongoClient().coconut_test
 
     def tearDown(self):
         self.db.TestDocumentLink.remove()

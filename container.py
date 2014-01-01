@@ -5,7 +5,7 @@ Distributed under the MIT license, see LICENSE file for details.
 '''
 
 from coconut.primitive import Element
-from coconut.db import get_db, SerialisableDBRef, SerialisableObjectId
+from coconut.db import SerialisableDBRef, SerialisableObjectId
 import coconut.schema
 import coconut.element
 import coconut.error
@@ -109,10 +109,10 @@ class Dict (MutableElement, dict):
         '''
 
         if self.__unsaved__ == None: self.__unsaved__ = dict(self)
-        if self.__schema__ == any:
+        schema = self.__schema__
+        if schema == any or any in schema or schema[dict] == any or any in self.__schema__[dict]:
             self.__unsaved__[key] = coconut.schema.Schema.import_element(value,any,self)
             return
-        schema = self.__schema__
         traverse = schema.get('traverse',True)
         if schema[dict] == any:
             if traverse:
@@ -162,7 +162,8 @@ class Dict (MutableElement, dict):
         unsets = {}
         current = self.__unsaved__ if self.__unsaved__ != None else self
         old = dict(self)
-        
+        schema = self.__schema__
+
         # Check for dropped keys
         if current != self:
             for key in old:
@@ -170,7 +171,10 @@ class Dict (MutableElement, dict):
                     unsets[key] = ''
        
         for key, current_value in current.items():
-            key_schema = self.__schema__[dict][key]
+            if schema == any or any in schema or schema[dict] == any or any in schema[dict]:
+                key_schema = any
+            else:
+                key_schema = schema[dict][key]
             # Is the value a primitive type?
             if not isinstance(current_value,MutableElement):
                 if key not in old or not old[key] == current_value:
@@ -180,7 +184,8 @@ class Dict (MutableElement, dict):
             traverse = key_schema.get('traverse',True)
             if not traverse:
                 # TODO: Check if there are actually any changes
-                sets[key] = current_value
+                # For now it seems that we do actually have to traverse everything when exporting
+                sets[key] = coconut.schema.Schema.export_element(current_value,key_schema)
                 continue
 
             # Don't look at subkeys of new items, just insert the whole dict.
@@ -362,7 +367,6 @@ class DocumentClass (type):
         
         # Register the class and DB with Document
         Document.__types__[clsname] = newcls
-        newcls.__db__ = get_db()[clsname]
         
         return newcls
 
@@ -370,14 +374,15 @@ class DocumentClass (type):
         '''Retrieve a Document from the database by ID.'''
 
         doc = None
+        clsname = cls.__name__
         if isinstance(id,str):
-            doc = cls.__db__.find_one({'_id':ObjectId(id),'__active__':True})
+            doc = cls.__db__[clsname].find_one({'_id':ObjectId(id),'__active__':True})
         elif isinstance(id,unicode):
-            doc = cls.__db__.find_one({'_id':ObjectId(id),'__active__':True})
+            doc = cls.__db__[clsname].find_one({'_id':ObjectId(id),'__active__':True})
         elif isinstance(id,coconut.element.Link):
             return id()
         elif isinstance(id,ObjectId):
-            doc = cls.__db__.find_one({'_id':id,'__active__':True})
+            doc = cls.__db__[clsname].find_one({'_id':id,'__active__':True})
         else:
             raise TypeError ('ID must be of type str, ObjectId or Link, not %s' % type(id).__name__)
         if not doc:
@@ -388,7 +393,8 @@ class DocumentClass (type):
         '''Return the first element matching the provided criteria.'''
 
         criteria['__active__'] = True
-        doc = cls.__db__.find_one(criteria)
+        clsname = cls.__name__
+        doc = cls.__db__[clsname].find_one(criteria)
         if not doc: raise coconut.error.DocumentNotFound (criteria)
         return cls(doc)
 
@@ -396,10 +402,11 @@ class DocumentClass (type):
         '''Get all matching documents.'''
 
         criteria['__active__'] = True
+        clsname = cls.__name__
         if limit:
-            doclist = cls.__db__.find(criteria, limit=limit)
+            doclist = cls.__db__[clsname].find(criteria, limit=limit)
         else:
-            doclist = cls.__db__.find(criteria)
+            doclist = cls.__db__[clsname].find(criteria)
         if sort: doclist.sort(*sort)
         objlist = [cls(doc) for doc in doclist]
         return objlist
@@ -410,13 +417,14 @@ class DocumentClass (type):
         Currently only indexes on top-level keys are supported.
         '''
 
+        clsname = cls.__name__
         for (key,val) in cls.__schema__[dict].items():
             if isinstance(val,dict):
                 index = val.get('index',None)
                 if not index: continue
                 opts = {}
                 if index == 'unique': opts['unique'] = True
-                cls.__db__.ensure_index(key, **opts)
+                cls.__db__[clsname].ensure_index(key, **opts)
 
 class Document (Dict):
     __metaclass__ = DocumentClass
@@ -444,6 +452,7 @@ class Document (Dict):
             self[key] = value
         # Check for default values
         for key,item_schema in self.__schema__[dict].items():
+            if key == any: continue
             if key not in self:
                 if isinstance(item_schema,dict) and 'default' in item_schema:
                     self[key] = copy.deepcopy(item_schema['default'])
@@ -473,13 +482,13 @@ class Document (Dict):
     def save (self):
         sets, unsets = self.get_changes()
         query = {'$set': sets.copy(), '$unset': unsets.copy()}
-
+        clsname = type(self).__name__
         try:
             if self.id:
-                self.__db__.update({'_id':ObjectId(self.id)}, query)
+                self.__db__[clsname].update({'_id':ObjectId(self.id)}, query)
             else:
                 query['$set']['__active__'] = True
-                docid = self.__db__.insert(query['$set'])
+                docid = self.__db__[clsname].insert(query['$set'])
                 self.id = str(docid)
         except pymongo.errors.DuplicateKeyError as e:
             raise coconut.error.UniqueIndexViolation(str(e))

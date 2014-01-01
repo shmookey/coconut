@@ -5,7 +5,7 @@ Distributed under the MIT license, see LICENSE file for details.
 '''
 
 from coconut.error import *
-from coconut.db import get_db, SerialisableDBRef, SerialisableObjectId
+from coconut.db import SerialisableDBRef, SerialisableObjectId
 from coconut.primitive import Element
 import coconut.container
 import coconut.schema
@@ -134,8 +134,9 @@ class Link (Element):
             elif self.type != dynamic_type:
                 raise ValidationTypeError (self.type,dynamic_type)
 
-        if self.type == any:
-            raise ValueError ('Cannot create untyped link. Target must be typed or type specified by schema.')
+        # We'll allow this for now but don't rely on it!
+        #if self.type == any:
+        #    raise ValueError ('Cannot create untyped link. Target must be typed or type specified by schema. Source: %s %s Schema: %s' % (type(target), target,schema))
 
     def __call__ (self):
         '''Dereference the link.'''
@@ -156,7 +157,9 @@ class Link (Element):
         if schema == any or schema[id] == any:
             # Create DBRef
             if self.type == any:
-                raise ValueError ('Cannot create DBRef from untyped reference.')
+                # Allowing implicit manual refs for now
+                # raise ValueError ('Cannot create DBRef from untyped reference.')
+                return SerialisableObjectId (self.targetid)
             return SerialisableDBRef (self.type.__name__, self.targetid)
         else:
             # Create manual reference

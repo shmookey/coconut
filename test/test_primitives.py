@@ -1,16 +1,17 @@
 #!/usr/bin/python2.7
 
-import coconut.container
-from coconut.db import get_db
-from coconut.error import ValidationTypeError, ValidationKeyError
-
 import unittest
+
+from pymongo import MongoClient
+
+import coconut.container
+from coconut.error import ValidationTypeError, ValidationKeyError
 
 class TestDBPrimitives (unittest.TestCase):
     '''Test primitive types.'''
 
     def tearDown(self):
-        db = get_db()
+        db = self.db = coconut.container.Document.__db__ = MongoClient().coconut_test
         db.TestDocument.remove()
 
     def test_assign_string_attr_to_string_attr (self):

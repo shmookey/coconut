@@ -6,17 +6,8 @@ Distributed under the MIT license, see LICENSE file for details.
 
 from coconut.error import *
 
-from pymongo import MongoClient
 from bson.objectid import ObjectId
 from bson.dbref import DBRef
-
-db = None
-
-def get_db ():
-    global db
-    if not db:
-        db = MongoClient().scalpel
-    return db
 
 class SerialisableDBRef (DBRef):
     def __json__ (self):

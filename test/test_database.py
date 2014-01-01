@@ -1,11 +1,13 @@
 #!/usr/bin/python2.7
 
+import unittest
+
+from pymongo import MongoClient
+
 import coconut.container
 import coconut.element
 import coconut.schema
 from coconut.error import ValidationTypeError, ValidationKeyError
-
-import unittest
 
 class TestDocument (coconut.container.Document):
     __schema__ = {
@@ -53,6 +55,7 @@ class TestSchema (unittest.TestCase):
      - Dict raises exception on attempt to set nonexistent key with non-any schema
     '''
     def setUp (self):
+        self.db = coconut.container.Document.__db__ = MongoClient().coconut_test
         self.source_data = {
             'attr_str': 'Test string',
             'attr_int': 42,

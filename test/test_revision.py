@@ -2,17 +2,17 @@
 
 import time, unittest
 
+from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 import coconut.container
 import coconut.revision
-from coconut.db import get_db
 
 class TestDBRevision (unittest.TestCase):
     '''Test the revision control mechanism.'''
 
     def setUp (self):
-        self.db = get_db()
+        self.db = coconut.container.Document.__db__ = MongoClient().coconut_test
 
     def tearDown(self):
         self.db.TestDocumentRevision.remove()
