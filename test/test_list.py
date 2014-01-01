@@ -1,14 +1,12 @@
 #!/usr/bin/python2.7
 
-from coconut.container import Document
-from coconut.schema import Schema
-from coconut.element import Link
+import coconut.container
 from coconut.db import get_db
 from coconut.error import ValidationTypeError, ValidationKeyError
 
 import unittest
 
-class AnotherTestDocument (Document):
+class AnotherTestDocument (coconut.container.Document):
     __schema__ = {
         'name': { str: any },
     }
@@ -30,7 +28,7 @@ class TestDBLists (unittest.TestCase):
     def test_default_list_on_import (self):
         '''The 'default' schema option assigns a given value to an unspecified list in a document being imported.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'defaulted': { list: any, 'default': [] } }
 
         instance = TestDocument_List ()
@@ -40,7 +38,7 @@ class TestDBLists (unittest.TestCase):
     def test_append_invalid_value_raises_keyerror (self):
         '''Appending an invalid value on an empty fixed-schema list raises a ValidationKeyError.'''
         
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'typed': {
               list: [ { str: any }, { float: any } ],
               'default': [], },
@@ -55,7 +53,7 @@ class TestDBLists (unittest.TestCase):
     def test_append_value_typed_list (self):
         '''Appending a valid value to a typed list makes that value available.'''
         
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'typed': {
               list: [ { str: any }, { float: any } ],
               'default': [], },
@@ -68,7 +66,7 @@ class TestDBLists (unittest.TestCase):
     def test_append_document_with_schema (self):
         '''Appending an Document on a schema-controlled list creates a new Link.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'of_links': {
               list: [ { id: 'AnotherTestDocument' } ],
               range: all,
@@ -83,7 +81,7 @@ class TestDBLists (unittest.TestCase):
     def test_dict_list_append_document (self):
         '''Appending an dict containing a key mapped to a Document creates a new Link.'''
         
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__= {
               'dict_links': {
                 list: [ { dict: { 'key': { id: 'AnotherTestDocument' } } } ],
@@ -101,7 +99,7 @@ class TestDBLists (unittest.TestCase):
     def test_set_invalid_value_raises_typerror (self):
         '''Setting an invalid value on a schema-managed list raises a ValidationTypeError.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'typed': {
               list: [ { str: any }, { float: any } ],
               'default': [] },
@@ -118,7 +116,7 @@ class TestDBLists (unittest.TestCase):
     def test_import_ranged_any_any_list (self):
         '''Arbitrary source list values with the any:any schema are available after import.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'ranged': {
               list: [ { any: any } ],
               range: all }
@@ -132,7 +130,7 @@ class TestDBLists (unittest.TestCase):
     def test_import_ranged_str_any_list (self):
         '''Arbitrary string values with the str:any schema are available after import.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'ranged': {
               list: [ { str: any } ],
               range: all }
@@ -146,7 +144,7 @@ class TestDBLists (unittest.TestCase):
     def test_import_list_any_list (self):
         '''Arbitrary values on a list:any schema are available after import.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'anylist': { list: any, range: all } }
 
         data = {'anylist':['something','something else']}
@@ -157,7 +155,7 @@ class TestDBLists (unittest.TestCase):
     def test_import_any_list (self):
         '''Setting an 'any' key to a list retains the values.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'anylist': any }
 
         data = {'anylist':['something','something else']}
@@ -169,7 +167,7 @@ class TestDBLists (unittest.TestCase):
     def test_list_save_load (self):
         '''Save and load a list.'''
 
-        class TestDocument_List (Document):
+        class TestDocument_List (coconut.container.Document):
             __schema__ = { 'typed': {
               list: [ { str: any }, { int: any }, { float: any } ],
               'default': [] }

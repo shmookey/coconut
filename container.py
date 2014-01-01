@@ -50,6 +50,11 @@ class MutableElement (Element):
         
         return coconut.schema.Schema.export_element(self)
 
+    def history (self, key=None):
+        '''Return a history iterator for the container or one of its keys.'''
+
+        return coconut.revision.History(self, key)
+
 class Dict (MutableElement, dict):
     '''Database-aware dict type.'''
 
@@ -71,6 +76,10 @@ class Dict (MutableElement, dict):
     def __str__ (self):
         current = self.__unsaved__ if self.__unsaved__ != None else self
         return dict.__str__(current)
+
+    def __len__ (self):
+        current = self.__unsaved__ if self.__unsaved__ != None else self
+        return dict.__len__(current)
 
     # Accessors
 
@@ -182,6 +191,11 @@ class Dict (MutableElement, dict):
 
             # Are there any changes in the child container?
             child_sets, child_unsets = current_value.get_changes()
+
+            if child_sets: sets[key] = child_sets
+            if child_unsets: unsets[key] = child_unsets
+            continue
+            # TODO: can probably scrap the rest of this?
             for child_key, child_value in child_sets.items():
                 qualified_key = '%s.%s' % (key,child_key)
                 sets[qualified_key] = child_value
@@ -318,7 +332,10 @@ class List (MutableElement, list):
                 continue
             
             child_sets, child_unsets = current_value.get_changes()
-
+            sets[i] = child_sets
+            unsets[i] = child_unsets
+            continue
+            # TODO: can probably scrap the rest of this?
             # An empty string key indicates the child wants to be rebuilt
             if len(child_sets) == 1 and '' in child_sets:
                 sets[i] = child_sets['']
@@ -375,13 +392,15 @@ class DocumentClass (type):
         if not doc: raise coconut.error.DocumentNotFound (criteria)
         return cls(doc)
 
-    def find (cls, criteria={}, limit=0):
+    def find (cls, criteria={}, limit=None, sort=[]):
         '''Get all matching documents.'''
 
-        #TODO: Implement limits higher than 1
         criteria['__active__'] = True
-        if limit == 1: return cls.find_first(criteria)
-        doclist = cls.__db__.find(criteria)
+        if limit:
+            doclist = cls.__db__.find(criteria, limit=limit)
+        else:
+            doclist = cls.__db__.find(criteria)
+        if sort: doclist.sort(*sort)
         objlist = [cls(doc) for doc in doclist]
         return objlist
 
@@ -405,6 +424,8 @@ class Document (Dict):
     __schema__ = { any: any }
     
     def __init__ (self, *args, **kwargs):
+        # Dirty hack to resolve cyclic inheritance imports
+        import coconut.revision
         if len(args) > 1 or (len(args) > 0 and kwargs):
             raise ValueError ('Document must be initialised with either one positional argument or keyword arguments.')
         Dict.__init__(self, self)
@@ -466,8 +487,8 @@ class Document (Dict):
         self.flush()
         event_query = {'set': sets.copy(), 'unset': unsets.copy()}
         # Write change event
-        if isinstance(self,Revision): return
-        event = Revision(item=self,changes=event_query,date=int(time.time()))
+        if isinstance(self,coconut.revision.Revision): return
+        event = coconut.revision.Revision(item=self,changes=event_query,date=time.time())
         event.save()
 
     def remove (self):
@@ -480,14 +501,4 @@ class Document (Dict):
         doc = coconut.schema.Schema.export_element(self)
         doc['id'] = self.id
         return doc
-
-class Revision (Document):
-    '''A change event to a document.'''
-
-    __schema__ = {dict:{
-      'item':    { id:   any },
-      'changes': { dict: any, 'traverse':False },
-      'date':    { int:  any },
-    }}
-
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-from coconut.container import Document
+import coconut.container
 from coconut.db import get_db
 from coconut.error import ValidationTypeError, ValidationKeyError
 
@@ -16,7 +16,7 @@ class TestDBPrimitives (unittest.TestCase):
     def test_assign_string_attr_to_string_attr (self):
         '''A string attribute can be assigned the value of another string attribute.'''
 
-        class TestDocument (Document):
+        class TestDocument (coconut.container.Document):
             __schema__ = { 'attr': { str: any } }
 
         doc1 = TestDocument({'attr':'foo'})
@@ -28,7 +28,7 @@ class TestDBPrimitives (unittest.TestCase):
     def test_increment_int (self):
         '''An integer attribute can be incremented with the += operator.'''
 
-        class TestDocument (Document):
+        class TestDocument (coconut.container.Document):
             __schema__ = { 'attr': { int: any } }
 
         doc = TestDocument({'attr':0})

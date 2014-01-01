@@ -98,8 +98,8 @@ class Schema (object):
             element = coconut.element.Link (source, schema=schema)
             return element
 
-        if not issubclass(element_type, expected):
-            raise ValidationTypeError (expected,element_type)
+        if not issubclass(element_type, expected) and not (expected == float and issubclass(element_type,int)):
+            raise ValidationTypeError(expected,element_type)
 
         # TODO: Validate primitives
         if issubclass(element_type,str): element = Str(source)
@@ -163,7 +163,7 @@ class Schema (object):
         if not issubclass(element_type,Element):
             raise ValidationTypeError(Element,element_type)
 
-        if not issubclass(element_type, expected):
+        if not issubclass(element_type, expected) and not (expected == float and issubclass(element_type,int)):
             raise ValidationTypeError(expected,element_type)
 
         if filter(lambda t: isinstance(source,t),[str,int,float,bool]):

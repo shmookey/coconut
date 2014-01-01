@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-from coconut.container import Document
+import coconut.container
 from coconut.db import get_db
 from coconut.error import UniqueIndexViolation
 
@@ -18,7 +18,7 @@ class TestDBLinks (unittest.TestCase):
     def test_export_link_becomes_objectid (self):
         '''A schema may include the mapping index:True.'''
 
-        class TestDocumentIndex (Document):
+        class TestDocumentIndex (coconut.container.Document):
             __schema__ = { 'attr': { str: any, 'index':True } }
 
         doc1 = TestDocumentIndex({'attr':'foo'})

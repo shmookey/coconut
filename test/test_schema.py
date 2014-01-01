@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-from coconut.container import Document
+import coconut.container
 from coconut.db import get_db
 from coconut.error import *
 
@@ -17,7 +17,7 @@ class TestDBSchema (unittest.TestCase):
     def test_invalid_key_raises_exception (self):
         '''A schema with an unrecognised key raises a SchemaError.'''
 
-        class TestDocumentSchemaKey (Document):
+        class TestDocumentSchemaKey (coconut.container.Document):
             __schema__ = { 'attr': { str: any, 'not_a_real_key':'error' } }
 
         def f():
@@ -28,7 +28,7 @@ class TestDBSchema (unittest.TestCase):
     def test_missing_datatype_raises_exception (self):
         '''A schema missing a datatype raises a SchemaError.'''
 
-        class TestDocumentSchemaType (Document):
+        class TestDocumentSchemaType (coconut.container.Document):
             __schema__ = { 'attr': { 'index':'unique' } }
 
         def f():

@@ -1,6 +1,6 @@
 #!/usr/bin/python2.7
 
-from coconut.container import Document
+import coconut.container
 from coconut.db import get_db
 from coconut.error import UniqueIndexViolation
 
@@ -19,7 +19,7 @@ class TestDBIndexes (unittest.TestCase):
     def test_schema_index_true (self):
         '''A schema may include the mapping index:True.'''
 
-        class TestDocumentIndex (Document):
+        class TestDocumentIndex (coconut.container.Document):
             __schema__ = { 'attr': { str: any, 'index':True } }
 
         doc1 = TestDocumentIndex({'attr':'foo'})
@@ -27,7 +27,7 @@ class TestDBIndexes (unittest.TestCase):
     def test_schema_index_unique (self):
         '''A schema may include the mapping 'index':'unique'.'''
 
-        class TestDocumentIndex (Document):
+        class TestDocumentIndex (coconut.container.Document):
             __schema__ = { 'attr': { str: any, 'index':'unique' } }
 
         doc1 = TestDocumentIndex({'attr':'foo'})
@@ -35,7 +35,7 @@ class TestDBIndexes (unittest.TestCase):
     def test_ensure_index_simple (self):
         '''ensure_indexes on a Document with an simple indexed schema creates one single-key MongoDB index.'''
 
-        class TestDocumentIndex (Document):
+        class TestDocumentIndex (coconut.container.Document):
             __schema__ = { 'attr': { str: any, 'index':True } }
 
         self.db.TestDocumentIndex.drop_indexes()
@@ -51,7 +51,7 @@ class TestDBIndexes (unittest.TestCase):
     def test_unique_index_enforced (self):
         '''Violating a unique index raises an UniqueIndexViolation upon saving.'''
 
-        class TestDocumentIndex (Document):
+        class TestDocumentIndex (coconut.container.Document):
             __schema__ = { 'attr': { str: any, 'index':'unique' } }
 
         TestDocumentIndex.ensure_indexes()

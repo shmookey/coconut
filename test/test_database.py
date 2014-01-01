@@ -1,13 +1,13 @@
 #!/usr/bin/python2.7
 
-from coconut.container import Document
-from coconut.element import Link
-from coconut.schema import Schema
+import coconut.container
+import coconut.element
+import coconut.schema
 from coconut.error import ValidationTypeError, ValidationKeyError
 
 import unittest
 
-class TestDocument (Document):
+class TestDocument (coconut.container.Document):
     __schema__ = {
         'attr_str':          { str:   any},
         'attr_int':          { int:   any },
@@ -37,7 +37,7 @@ class TestDocument (Document):
                                'default': [] },
     }
 
-class AnotherTestDocument (Document):
+class AnotherTestDocument (coconut.container.Document):
     __schema__ = {
         'name': { str: any },
     }
@@ -92,7 +92,7 @@ class TestSchema (unittest.TestCase):
     def test_export (self):
         instance = TestDocument (self.source_data)
         self.assertIsInstance (instance, TestDocument)
-        export = Schema.export_element(instance)
+        export = coconut.schema.Schema.export_element(instance)
         self.assertEqual (export['attr_str'], self.source_data['attr_str'])
         self.assertEqual (export['attr_int'], self.source_data['attr_int'])
         self.assertEqual (export['attr_float'], self.source_data['attr_float'])
@@ -130,7 +130,7 @@ class TestSchema (unittest.TestCase):
 
         instance2 = TestDocument(self.source_data)
         instance2.attr_static_link = instance1
-        self.assertIsInstance (instance2.attr_static_link,Link)
+        self.assertIsInstance (instance2.attr_static_link,coconut.element.Link)
         instance2.save()
 
         instance3 = TestDocument[instance2.id]
