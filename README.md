@@ -17,27 +17,39 @@ Features
 
 Get Started
 -----------
-
-Access Coconut's functionality by subclassing the *Document* type. Initialise *Document* with your database name and away you go:
-
 ```python
 import coconut.container
-# Set up database
+# Set up Mongo client
 coconut.container.Document.set_db({'db':'MyDatabase'})
 
-# Declare a Document type
-class MyDocument (coconut.container.Document):
-    pass
+# Declare a Document type and annotate it with a schema
+class Person (coconut.container.Document):
+    __schema__ = {
+        'name':    { str: any, 'index':'unique' },
+        'age':     { int: any },
+        'referer': { id: 'Person' },
+    }
 
-# Create some Document instances
-doc1 = MyDocument()
-doc1['foo'] = 'bar'
-doc1.save()
+# Create, update and save some instances
+john = Person(name='Jonno',age=32)
+john.name = 'Jonathan'  # Use attribute-style access
+john['name'] = 'John'   # Or dict-style access
+john.save()
+fred = Person({'name':'Fred','age':29,'referer':john})
+fred.save()
 
-doc2 = MyDocument()
+# Find records
+john2 = Person[john.id]              # By array-style access
+fred2 = Person.find({'_id':fred.id}) # By MongoDB query
+john3 = fred2.referer()              # By link dereferencing
 
-doc2 = MyDocument[doc.id]
-print doc2['foo'] # Prints 'bar'
+# View history
+for i in range(5):
+    john.age += 1
+    john.save()
+history = john.history('age')
+for i in history:
+    print i # Prints 36,35,34,33,32
 ```
 
 Further Reading
