@@ -53,6 +53,33 @@ for i,age in enumerate(history):
     print i # Prints 37,36,35,34,33
 ```
 
+Schemas
+-------
+
+Coconut exposes most of its functionality through *schemas*, which tell Coconut how to interpret and validate your objects. A Coconut schema is simply a dictionary describing the object's attributes. The one exception is the *any* schema, which will validate against any object. Schemas must contain exactly one *data type* key in the form of the Python builtin which most closely corresponds to the kind of data the object contains. Currently supported data type keys are: *int*, *float*, *str*, *list*, *dict*, *id* and *any*.
+
+The data type key maps to a *constraint* object. For most data types the constraint value must be *any*. For the *list* and *dict* data type, the constraint value is respectively a list or a dict. A constraint dict maps the keys that may appear in the dict being processed to the schema objects for those items. Each item in a constraint list is a schema for validating an item at that position in the list, unless the list schema has the *range: all* property set, which causes the first schema in the list to be applied to all items.
+
+To use a schema, just set the *__schema__* attribute on a subclass of *Document*. If you don't need to set any other options, you can set __schema__ to the constraint object, rather than a full schema. The following two examples are equivalent:
+
+```python
+class MyDocument(Document):
+    '''Using a full schema for __schema__.'''
+    __schema__ = {
+        dict: {
+            'foo': { str: any },
+            'bar': { str: any },
+        }
+    }
+
+class MyDocument(Document):
+    '''Using a constraint object for __schema__.'''
+    __schema__ = {
+        'foo': { str: any },
+        'bar': { str: any },
+    }
+```
+
 Further Reading
 ---------------
 
