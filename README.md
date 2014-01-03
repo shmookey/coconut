@@ -80,6 +80,11 @@ class MyDocument(Document):
     }
 ```
 
+Revisioning
+-----------
+
+Coconut provides automatic revisioning for all fields and sub-fields of documents. Revisions are stored in the Revision collection. The history() method on any collection type (currently *Document*, *Dict* and *List*) returns an iterator over the collection or any key, which may be specified as an argument in MongoDB dot notation, e.g. Shape.Dimensions.Width.
+
 Further Reading
 ---------------
 
