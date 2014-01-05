@@ -387,7 +387,9 @@ class DocumentClass (type):
             raise TypeError ('ID must be of type str, ObjectId or Link, not %s' % type(id).__name__)
         if not doc:
             raise coconut.error.DocumentNotFound ('Could not find document ID: %s' % str(id))
-        return cls(doc)
+        obj = cls(doc)
+        obj.flush()
+        return obj
 
     def find_first (cls, criteria):
         '''Return the first element matching the provided criteria.'''
@@ -396,7 +398,9 @@ class DocumentClass (type):
         clsname = cls.__name__
         doc = cls.__db__[clsname].find_one(criteria)
         if not doc: raise coconut.error.DocumentNotFound (criteria)
-        return cls(doc)
+        obj = cls(doc)
+        obj.flush()
+        return obj
 
     def find (cls, criteria={}, limit=None, sort=[]):
         '''Get all matching documents.'''
@@ -409,6 +413,8 @@ class DocumentClass (type):
             doclist = cls.__db__[clsname].find(criteria)
         if sort: doclist.sort(*sort)
         objlist = [cls(doc) for doc in doclist]
+        for obj in objlist:
+            obj.flush()
         return objlist
 
     def ensure_indexes (cls):

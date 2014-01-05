@@ -110,6 +110,37 @@ class TestDBRevision (unittest.TestCase):
             self.assertEquals(val,4-j)
         self.assertEquals(j,4)
 
+    def test_skip_redundant_key_assignments (self):
+        '''Assigning a value to a key without changing it does not mark the field changed.'''
+
+        class TestDocumentRevision (coconut.container.Document):
+            __schema__ = { 'foo': { int: any }, 'bar': { int: any } }
+
+        doc = TestDocumentRevision({'bar':5})
+        doc.save()
+        doc.foo = 7
+        doc.bar = 5
+        sets, unsets = doc.get_changes()
+        self.assertIn('foo',sets)
+        self.assertNotIn('bar',sets)
+        doc.save()
+        history = doc.history()
+        revision = history.next()
+        self.assertIn('foo', revision)
+        self.assertNotIn('bar',revision)
+
+    def test_skip_redundant_keys_on_update (self):
+        '''Calling update() with unchanged fields does not mark those fields changed.'''
+
+        class TestDocumentRevision (coconut.container.Document):
+            __schema__ = { 'foo': { int: any }, 'bar': { int: any } }
+
+        doc = TestDocumentRevision({'foo':1,'bar':2})
+        doc.save()
+        doc.update ({'foo':3,'bar':2})
+        sets, unsets = doc.get_changes()
+        self.assertIn('foo',sets)
+        self.assertNotIn('bar',sets)
 
     def test_history_subkey (self):
         '''Iterate over a document key's revision history.'''
@@ -135,6 +166,35 @@ class TestDBRevision (unittest.TestCase):
         for j, val in enumerate(history):
             self.assertEquals(val,4-j)
         self.assertEquals(j,4)
+
+    def test_flush_on_load (self):
+        '''A freshly loaded document does not report any changes (because it is flushed).'''
+
+        class TestDocumentRevision (coconut.container.Document):
+            __schema__ = { 'foo': { int: any }, 'bar': { int: any } }
+
+        doc = TestDocumentRevision({'foo':1,'bar':2})
+        doc.save()
+        doc2 = TestDocumentRevision[doc.id]
+        sets, unsets = doc2.get_changes()
+        self.assertNotIn('foo',sets)
+        self.assertNotIn('bar',sets)
+
+    def test_flush_on_dereference (self):
+        '''A freshly derefenced document does not report any changes (because it is flushed).'''
+
+        class TestDocumentRevision (coconut.container.Document):
+            __schema__ = { 'foo': { int: any }, 'link': { id: any } }
+
+        doc = TestDocumentRevision({'foo':1})
+        doc.save()
+        doc2 = TestDocumentRevision({'foo':5,'link':doc})
+        doc2.save()
+        doc3 = TestDocumentRevision[doc2.id]
+        doc4 = doc3.link()
+        sets, unsets = doc4.get_changes()
+        self.assertNotIn('foo',sets)
+        self.assertNotIn('link',sets)
 
 if __name__ == '__main__':
     unittest.main()
