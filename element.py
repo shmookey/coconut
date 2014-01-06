@@ -121,7 +121,8 @@ class Link (Element):
         elif isinstance(target,dict):
             self.targetid = target['id']
             dynamic_type = coconut.container.Document.__types__[target['collection']]
-        elif isinstance(target,[list,tuple]):
+        elif isinstance(target,(list,tuple)):
+            print target
             self.targetid = target[1]
             dynamic_type = coconut.container.Document.__types__[target[0]]
 

@@ -15,8 +15,12 @@ class AnotherTestDocument (coconut.container.Document):
 
 class TestDBLists (unittest.TestCase):
     '''Test DB List types.'''
-    def tearDown(self):
+
+    def setUp (self):
         db = self.db = coconut.container.Document.__db__ = MongoClient().coconut_test
+
+    def tearDown(self):
+        db = self.db
         db.TestDocument_List.remove()
         db.AnotherTestDocument.remove()
 
@@ -181,6 +185,77 @@ class TestDBLists (unittest.TestCase):
         loaded = TestDocument_List[instance.id]
         for i,item in enumerate(data['typed']):
             self.assertEquals (loaded.typed[i], item)
+
+    def test_list_assign (self):
+        '''Assign a list to a list field.'''
+
+        class TestDocument_List (coconut.container.Document):
+            __schema__ = { 'foo': {
+              list: [ { str: any } ],
+              range: all,
+              'default': [] }
+            }
+
+
+        instance = TestDocument_List ()
+        data = ['a','b','c']
+        instance.foo = data
+        instance.save()
+        for i,item in enumerate(data):
+            self.assertEquals(instance.foo[i], item)
+        # Are the updated values available after loading?
+        instance2 = TestDocument_List[instance.id]
+        for i,item in enumerate(data):
+            self.assertEquals(instance2.foo[i], item)
+        
+
+    def test_list_reassign (self):
+        '''Reassign a list to a list field.'''
+
+        class TestDocument_List (coconut.container.Document):
+            __schema__ = { 'foo': {
+              list: [ { str: any } ],
+              range: all,
+              'default': [] }
+            }
+
+
+        instance = TestDocument_List ()
+        instance.foo = ['a','b','c']
+        instance.save()
+        data = ['d','e','f']
+        instance.foo = data
+        instance.save()
+        for i,item in enumerate(data):
+            self.assertEquals(instance.foo[i], item)
+        # Are the updated values available after loading?
+        instance2 = TestDocument_List[instance.id]
+        for i,item in enumerate(data):
+            self.assertEquals(instance2.foo[i], item)
+
+    def test_list_reassign_different_length (self):
+        '''Reassign a list of a different length to a list field.'''
+
+        class TestDocument_List (coconut.container.Document):
+            __schema__ = { 'foo': {
+              list: [ { str: any } ],
+              range: all,
+              'default': [] }
+            }
+
+
+        instance = TestDocument_List ()
+        instance.save()
+        data = ['d','e','f','g']
+        for item in data:
+            instance.foo.append(item)
+        instance.save()
+        for i,item in enumerate(data):
+            self.assertEquals(instance.foo[i], item)
+        # Are the updated values available after loading?
+        instance2 = TestDocument_List[instance.id]
+        for i,item in enumerate(data):
+            self.assertEquals(instance2.foo[i], item)
 
 if __name__ == '__main__':
     unittest.main()

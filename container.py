@@ -171,10 +171,12 @@ class Dict (MutableElement, dict):
                     unsets[key] = ''
        
         for key, current_value in current.items():
+            # Get schema for current item
             if schema == any or any in schema or schema[dict] == any or any in schema[dict]:
                 key_schema = any
             else:
                 key_schema = schema[dict][key]
+
             # Is the value a primitive type?
             if not isinstance(current_value,MutableElement):
                 if key not in old or not old[key] == current_value:
@@ -193,10 +195,10 @@ class Dict (MutableElement, dict):
                 child_item = coconut.schema.Schema.export_element(current_value)
                 sets[key] = child_item
                 continue
-
+            
             # Are there any changes in the child container?
             child_sets, child_unsets = current_value.get_changes()
-
+                
             if child_sets: sets[key] = child_sets
             if child_unsets: unsets[key] = child_unsets
             continue
@@ -217,6 +219,7 @@ class List (MutableElement, list):
         list.__init__(self)
         MutableElement.__init__ (self, parent, schema)
         self.__unsaved__ = None
+        self.__flushed__ = None
 
     # Descriptors
 
@@ -255,7 +258,9 @@ class List (MutableElement, list):
         Implements copy-on-write until flushed.
         '''
 
-        if self.__unsaved__ == None: self.__unsaved__ = list(self)
+        if self.__unsaved__ == None:
+            self.__flushed__ = list(self)
+            self.__unsaved__ = list(self)
         if self.__schema__ == any:
             self.__unsaved__[key] = coconut.schema.Schema.import_element(value,any,self)
             return
@@ -271,7 +276,9 @@ class List (MutableElement, list):
     def append (self, value):
         '''Add an item to the end of a list.'''
         
-        if self.__unsaved__ == None: self.__unsaved__ = list(self)
+        if self.__unsaved__ == None:
+            self.__flushed__ = list(self)
+            self.__unsaved__ = list(self)
         if self.__schema__ == any:
             self.__unsaved__.append(coconut.schema.Schema.import_element(value,any,self))
             return
@@ -293,6 +300,7 @@ class List (MutableElement, list):
         if self.__unsaved__ != None:
             list.__init__(self, self.__unsaved__)
             self.__unsaved__ = None
+            self.__flushed__ = None
         for item in self:
             if isinstance(item,MutableElement):
                 item.flush()
@@ -302,13 +310,13 @@ class List (MutableElement, list):
         sets = {}
         unsets = {}
         current = self.__unsaved__ if self.__unsaved__ != None else self
-        old = list(self)
+        old = self.__flushed__ if self.__flushed__ != None else self
         schema = self.__schema__
-        
         # Rebuild the whole list if the length has changed.
         if len(current) != len(old):
-            sets = {'': coconut.schema.Schema.export_element(self,schema)}
-            return sets, unsets
+            return coconut.schema.Schema.export_element(self,schema), {}
+            #sets = {'': coconut.schema.Schema.export_element(self,schema)}
+            #return sets, unsets
 
         for i, current_value in enumerate(current):
             if schema == any:
