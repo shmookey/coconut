@@ -85,6 +85,11 @@ Revisioning
 
 Coconut provides automatic revisioning for all fields and sub-fields of documents. Revisions are stored in the Revision collection. The history() method on any collection type (currently *Document*, *Dict* and *List*) returns an iterator over the collection or any key, which may be specified as an argument in MongoDB dot notation, e.g. Shape.Dimensions.Width.
 
+Links
+-----
+
+Coconut can automatically reference and reference Documents for you using the *id* schema type. You can specify either the Document class name or *any* as the target and Coconut will store the minimum required information to make the reference unambiguous, i.e. *id: MyDocument* will store only the ID, whereas *id: any* will cause a full DBRef including the collection name to be stored.
+
 Further Reading
 ---------------
 
