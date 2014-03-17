@@ -292,6 +292,24 @@ class List (MutableElement, list):
             element = value
         self.__unsaved__.append(element)
 
+    def remove (self, value):
+        '''Remove an item from the list by value.'''
+        if self.__unsaved__ == None:
+            self.__flushed__ = list(self)
+            self.__unsaved__ = list(self)
+        if self.__schema__ == any:
+            self.__unsaved__.remove(coconut.schema.Schema.import_element(value,any,self))
+            return
+        schema = self.__schema__
+        traverse = schema.get('traverse',True)
+        idx = len(self.__unsaved__)
+        item_schema = coconut.schema.Schema.get_list_index_schema(idx, schema)
+        if traverse:
+            element = coconut.schema.Schema.import_element(value,item_schema,self)
+        else:
+            element = value
+        self.__unsaved__.remove(element)
+
     # Database methods
 
     def flush (self):
@@ -307,8 +325,8 @@ class List (MutableElement, list):
 
     def get_changes (self):
         '''Recursively generate and return a list of unsaved changes.'''
-        sets = {}
-        unsets = {}
+        sets = []
+        unsets = []
         current = self.__unsaved__ if self.__unsaved__ != None else self
         old = self.__flushed__ if self.__flushed__ != None else self
         schema = self.__schema__
@@ -331,22 +349,30 @@ class List (MutableElement, list):
             # Is the value a primitive type?
             if not isinstance(current_value,MutableElement):
                 if i >= len(old) or not old[i] == current_value:
-                    sets[i] = coconut.schema.Schema.export_element(current_value,key_schema)
+                    #sets[i] = coconut.schema.Schema.export_element(current_value,key_schema)
+                    sets.append(coconut.schema.Schema.export_element(current_value,key_schema))
                 continue
             
             traverse = key_schema.get('traverse',True)
             if not traverse:
                 # TODO: Check if there are actually any changes
-                sets[i] = current_value
+                #sets[i] = current_value
+                sets.append(current_value)
+                print "set list item %i to value %s" % (i,current_value)
                 continue
             if i >= len(old):
                 child_item = coconut.schema.Schema.export_element(current_value)
-                sets[i] = child_item
+                #sets[i] = child_item
+                sets.append(child_item)
                 continue
             
             child_sets, child_unsets = current_value.get_changes()
-            sets[i] = child_sets
-            unsets[i] = child_unsets
+            #sets[i] = child_sets
+            #unsets[i] = child_unsets
+            if child_sets:
+                sets.append(child_sets)
+            if child_unsets:
+                unsets.append(child_unsets)
             continue
             # TODO: can probably scrap the rest of this?
             # An empty string key indicates the child wants to be rebuilt
@@ -515,7 +541,8 @@ class Document (Dict):
         event.save()
 
     def remove (self):
-        self.__collection__.update ({'_id':self.id},{'$set':{'__active__':False}})
+        clsname = type(self).__name__
+        self.__db__[clsname].update ({'_id':self.id},{'$set':{'__active__':False}})
         self.id = None
 
     def export (self):

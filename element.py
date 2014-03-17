@@ -22,6 +22,8 @@ class JSONElementEncoder (json.JSONEncoder):
     def default (self, o):
         if isinstance(o,coconut.container.MutableElement):
             return Schema.export_element(o)
+        if isinstance(o,Link):
+            return o.targetid
         try:
             return o.__json__()
         except:
@@ -166,3 +168,19 @@ class Link (Element):
             # Create manual reference
             return SerialisableObjectId (self.targetid)
 
+    def __repr__ (self):
+        object_id = self.targetid or self.document.id
+        collection = self.type or '<untyped>'
+        return 'Link("%s", %s)' % (object_id, collection)
+
+    def __eq__ (self, item):
+        if isinstance(item,Link):
+            if item.targetid and self.targetid and item.targetid == self.targetid:
+                if item.type and self.type:
+                    return item.type == self.type
+                return True
+        if isinstance(item,str):
+            return self.targetid == item
+        if isinstance(item,ObjectId):
+            return self.targetid == str(item)
+        return False

@@ -257,5 +257,33 @@ class TestDBLists (unittest.TestCase):
         for i,item in enumerate(data):
             self.assertEquals(instance2.foo[i], item)
 
+    def test_list_modify_one_leave_another (self):
+        '''Modify one line but leave another unchanged.'''
+
+        class TestDocument_List (coconut.container.Document):
+            __schema__ = {
+              'foo': {
+                list: [ { str: any } ],
+                range: all,
+                'default': []
+              }, 'bar': {
+                list: [ { str: any } ],
+                range: all,
+                'default': []
+              }
+            }
+
+
+        instance1 = TestDocument_List ()
+        instance1.foo.append('hello')
+        instance1.save()
+        instance2 = TestDocument_List[instance1.id]
+        sets, unsets = instance2.get_changes()
+        print 'sets=%s' % sets
+        instance2.bar.append('hi')
+        instance2.save()
+        self.assertEquals(instance2.foo[0], 'hello')
+        self.assertEquals(instance2.bar[0], 'hi')
+        
 if __name__ == '__main__':
     unittest.main()
