@@ -36,6 +36,23 @@ class History (object):
             component = component[term]
         return component
 
+    def first (self):
+        '''Point the iterator at the first chronological revision and return it.'''
+
+        query = {
+            'item.$id': self.document.id,
+        }
+        if self.field:
+            query['changes.set.%s' % self.field] = {'$exists':True}
+        revisions = coconut.revision.Revision.find(query, sort=('date',pymongo.ASCENDING), limit=1)
+        self.current = revisions[0]
+        component = self.current.changes['set']
+        if not self.path: return component
+        for term in self.path:
+            component = component[term]
+        return component
+        
+
 class Revision (coconut.container.Document):
     '''A change event to a document.'''
 

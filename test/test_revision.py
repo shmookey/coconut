@@ -33,6 +33,24 @@ class TestDBRevision (unittest.TestCase):
         self.assertIn ('attr', r.changes['set'])
         self.assertEquals (r.changes['set']['attr'], 'foo')
 
+    def test_history_first_revision (self):
+        '''history.first() selects the original Revision.'''
+
+        class TestDocumentRevision (coconut.container.Document):
+            __schema__ = { 'attr': { str: any } }
+
+        doc1 = TestDocumentRevision({'attr':'foo'})
+        doc1.save()
+        doc1.attr = 'bar'
+        doc1.save()
+        doc1.attr = 'foobar'
+        doc1.save()
+
+        history = doc1.history()
+        r = history.first()
+        self.assertIn ('attr', r)
+        self.assertEquals (r['attr'], 'foo')
+
     def test_minimal_shallow_differential (self):
         '''Shallow updates create record a minimal differential.'''
 
